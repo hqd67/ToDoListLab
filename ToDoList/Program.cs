@@ -90,11 +90,31 @@ public class TaskItem
 
     public class MainForm : Form
     {
+        private ListView lvTasks;
+
         public MainForm()
         {
-            this.Text = "TodoApp";
-            this.Width = 800;
+            this.Text = "Todo List";
+            this.Width = 900;
             this.Height = 600;
+
+            lvTasks = new ListView
+            {
+                Left = 10,
+                Top = 10,
+                Width = 860,
+                Height = 500,
+                View = View.Details,
+                FullRowSelect = true,
+                GridLines = true
+            };
+            lvTasks.Columns.Add("Название", 300);
+            lvTasks.Columns.Add("Приоритет", 100);
+            lvTasks.Columns.Add("Категория", 150);
+            lvTasks.Columns.Add("Срок", 120);
+            lvTasks.Columns.Add("Выполнена", 100);
+
+            this.Controls.Add(lvTasks);
         }
     }
 }
