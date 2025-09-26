@@ -1,12 +1,23 @@
+using System.Text.Json;
 using System;
-using System.Windows.Forms;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Windows.Forms;
 
 namespace TodoApp
-{ 
-   public enum PriorityLevel
+{
+    static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            ApplicationConfiguration.Initialize();
+            Application.Run(new MainForm());
+        }
+    }
+
+    public enum PriorityLevel
     {
         Low,
         Medium,
@@ -14,15 +25,16 @@ namespace TodoApp
         Critical
     }
 
-public class TaskItem
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public string Title { get; set; } = "";
-    public PriorityLevel Priority { get; set; } = PriorityLevel.Medium;
-    public string Category { get; set; } = "";
-    public DateTime? DueDate { get; set; } = null;
-    public bool IsDone { get; set; } = false;
-}
+    public class TaskItem
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Title { get; set; } = "";
+        public PriorityLevel Priority { get; set; } = PriorityLevel.Medium;
+        public string Category { get; set; } = "";
+        public DateTime? DueDate { get; set; } = null;
+        public bool IsDone { get; set; } = false;
+    }
+
     public class TaskRepository
     {
         private readonly string _filePath;
@@ -78,13 +90,76 @@ public class TaskItem
             }
         }
     }
-    static class Program
+
+    public class TaskForm : Form
     {
-        [STAThread]
-        static void Main()
+        private TextBox txtTitle;
+        private ComboBox cbPriority;
+        private TextBox txtCategory;
+        private DateTimePicker dtpDueDate;
+        private CheckBox chkNoDate;
+        private CheckBox chkDone;
+        private Button btnOk, btnCancel;
+
+        public TaskItem Task { get; private set; }
+
+        public TaskForm(TaskItem? task = null)
         {
-            ApplicationConfiguration.Initialize();
-            Application.Run(new MainForm());
+            Task = task != null ? new TaskItem
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Priority = task.Priority,
+                Category = task.Category,
+                DueDate = task.DueDate,
+                IsDone = task.IsDone
+            } : new TaskItem();
+
+            InitializeComponent();
+
+            txtTitle.Text = Task.Title;
+            cbPriority.SelectedItem = Task.Priority.ToString();
+            txtCategory.Text = Task.Category;
+            if (Task.DueDate.HasValue) dtpDueDate.Value = Task.DueDate.Value;
+            chkNoDate.Checked = !Task.DueDate.HasValue;
+            chkDone.Checked = Task.IsDone;
+        }
+
+        private void InitializeComponent()
+        {
+            this.Text = "Задача";
+            this.Width = 400;
+            this.Height = 250;
+
+            Label lblTitle = new Label { Left = 10, Top = 10, Text = "Название:" };
+            txtTitle = new TextBox { Left = 100, Top = 10, Width = 250 };
+
+            Label lblPriority = new Label { Left = 10, Top = 40, Text = "Приоритет:" };
+            cbPriority = new ComboBox { Left = 100, Top = 40, Width = 150 };
+            cbPriority.Items.AddRange(Enum.GetNames(typeof(PriorityLevel)));
+
+            Label lblCategory = new Label { Left = 10, Top = 70, Text = "Категория:" };
+            txtCategory = new TextBox { Left = 100, Top = 70, Width = 250 };
+
+            Label lblDueDate = new Label { Left = 10, Top = 100, Text = "Срок:" };
+            dtpDueDate = new DateTimePicker { Left = 100, Top = 100, Width = 200 };
+            chkNoDate = new CheckBox { Left = 310, Top = 100, Text = "Без даты" };
+
+            chkDone = new CheckBox { Left = 100, Top = 130, Text = "Выполнена" };
+
+            btnOk = new Button { Text = "ОК", Left = 200, Top = 170, DialogResult = DialogResult.OK };
+            btnCancel = new Button { Text = "Отмена", Left = 280, Top = 170, DialogResult = DialogResult.Cancel };
+
+            btnOk.Click += (s, e) =>
+            {
+                Task.Title = txtTitle.Text;
+                Task.Priority = (PriorityLevel)Enum.Parse(typeof(PriorityLevel), cbPriority.SelectedItem.ToString());
+                Task.Category = txtCategory.Text;
+                Task.DueDate = chkNoDate.Checked ? null : dtpDueDate.Value.Date;
+                Task.IsDone = chkDone.Checked;
+            };
+
+            this.Controls.AddRange(new Control[] { lblTitle, txtTitle, lblPriority, cbPriority, lblCategory, txtCategory, lblDueDate, dtpDueDate, chkNoDate, chkDone, btnOk, btnCancel });
         }
     }
 
