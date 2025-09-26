@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
 
@@ -166,6 +167,8 @@ namespace TodoApp
     {
         private ListView lvTasks;
         private Button btnAdd, btnEdit, btnDelete, btnToggleDone;
+        private ComboBox cbSort;
+        private CheckBox chkDescending;
         private TaskRepository repo;
 
         public MainForm()
@@ -176,12 +179,23 @@ namespace TodoApp
 
             repo = new TaskRepository("tasks.json");
 
+            // Панель управления сверху
+            Panel topPanel = new Panel { Dock = DockStyle.Top, Height = 40 };
+
+            cbSort = new ComboBox { Left = 10, Top = 10, Width = 200 };
+            cbSort.Items.AddRange(new string[] { "Название", "Приоритет", "Категория", "Срок", "Выполнена" });
+            cbSort.SelectedIndexChanged += (s, e) => RefreshTasks();
+
+            chkDescending = new CheckBox { Left = 220, Top = 12, Text = "По убыванию" };
+            chkDescending.CheckedChanged += (s, e) => RefreshTasks();
+
+            topPanel.Controls.Add(cbSort);
+            topPanel.Controls.Add(chkDescending);
+
+            // Список задач
             lvTasks = new ListView
             {
-                Left = 10,
-                Top = 10,
-                Width = 860,
-                Height = 500,
+                Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true
@@ -192,21 +206,28 @@ namespace TodoApp
             lvTasks.Columns.Add("Срок", 120);
             lvTasks.Columns.Add("Выполнена", 100);
 
-            btnAdd = new Button { Text = "Добавить", Left = 10, Top = 520 };
-            btnEdit = new Button { Text = "Редактировать", Left = 110, Top = 520 };
-            btnDelete = new Button { Text = "Удалить", Left = 230, Top = 520 };
-            btnToggleDone = new Button { Text = "Отметить/Снять", Left = 330, Top = 520 };
+            // Панель кнопок снизу
+            Panel bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 50 };
+
+            btnAdd = new Button { Text = "Добавить", Left = 10, Top = 10 };
+            btnEdit = new Button { Text = "Редактировать", Left = 110, Top = 10 };
+            btnDelete = new Button { Text = "Удалить", Left = 230, Top = 10 };
+            btnToggleDone = new Button { Text = "Отметить/Снять", Left = 330, Top = 10 };
 
             btnAdd.Click += BtnAdd_Click;
             btnEdit.Click += BtnEdit_Click;
             btnDelete.Click += BtnDelete_Click;
             btnToggleDone.Click += BtnToggleDone_Click;
 
+            bottomPanel.Controls.Add(btnAdd);
+            bottomPanel.Controls.Add(btnEdit);
+            bottomPanel.Controls.Add(btnDelete);
+            bottomPanel.Controls.Add(btnToggleDone);
+
+            // Добавляем всё в форму
             this.Controls.Add(lvTasks);
-            this.Controls.Add(btnAdd);
-            this.Controls.Add(btnEdit);
-            this.Controls.Add(btnDelete);
-            this.Controls.Add(btnToggleDone);
+            this.Controls.Add(topPanel);
+            this.Controls.Add(bottomPanel);
 
             RefreshTasks();
         }
@@ -214,7 +235,23 @@ namespace TodoApp
         private void RefreshTasks()
         {
             lvTasks.Items.Clear();
-            foreach (var task in repo.Tasks)
+            IEnumerable<TaskItem> tasks = repo.Tasks;
+
+            if (cbSort.SelectedItem != null)
+            {
+                bool desc = chkDescending.Checked;
+
+                switch (cbSort.SelectedItem.ToString())
+                {
+                    case "Название": tasks = desc ? tasks.OrderByDescending(t => t.Title) : tasks.OrderBy(t => t.Title); break;
+                    case "Приоритет": tasks = desc ? tasks.OrderByDescending(t => t.Priority) : tasks.OrderBy(t => t.Priority); break;
+                    case "Категория": tasks = desc ? tasks.OrderByDescending(t => t.Category) : tasks.OrderBy(t => t.Category); break;
+                    case "Срок": tasks = desc ? tasks.OrderByDescending(t => t.DueDate) : tasks.OrderBy(t => t.DueDate); break;
+                    case "Выполнена": tasks = desc ? tasks.OrderByDescending(t => t.IsDone) : tasks.OrderBy(t => t.IsDone); break;
+                }
+            }
+
+            foreach (var task in tasks)
             {
                 var lvi = new ListViewItem(task.Title);
                 lvi.SubItems.Add(task.Priority.ToString());
@@ -247,7 +284,8 @@ namespace TodoApp
                 RefreshTasks();
             }
         }
-            private void BtnDelete_Click(object sender, EventArgs e)
+
+        private void BtnDelete_Click(object sender, EventArgs e)
         {
             if (lvTasks.SelectedItems.Count == 0) return;
             var task = (TaskItem)lvTasks.SelectedItems[0].Tag;
