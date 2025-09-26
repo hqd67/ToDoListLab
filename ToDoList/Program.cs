@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -166,12 +165,16 @@ namespace TodoApp
     public class MainForm : Form
     {
         private ListView lvTasks;
+        private Button btnAdd, btnEdit, btnDelete, btnToggleDone;
+        private TaskRepository repo;
 
         public MainForm()
         {
             this.Text = "Todo List";
             this.Width = 900;
             this.Height = 600;
+
+            repo = new TaskRepository("tasks.json");
 
             lvTasks = new ListView
             {
@@ -189,7 +192,76 @@ namespace TodoApp
             lvTasks.Columns.Add("Срок", 120);
             lvTasks.Columns.Add("Выполнена", 100);
 
+            btnAdd = new Button { Text = "Добавить", Left = 10, Top = 520 };
+            btnEdit = new Button { Text = "Редактировать", Left = 110, Top = 520 };
+            btnDelete = new Button { Text = "Удалить", Left = 230, Top = 520 };
+            btnToggleDone = new Button { Text = "Отметить/Снять", Left = 330, Top = 520 };
+
+            btnAdd.Click += BtnAdd_Click;
+            btnEdit.Click += BtnEdit_Click;
+            btnDelete.Click += BtnDelete_Click;
+            btnToggleDone.Click += BtnToggleDone_Click;
+
             this.Controls.Add(lvTasks);
+            this.Controls.Add(btnAdd);
+            this.Controls.Add(btnEdit);
+            this.Controls.Add(btnDelete);
+            this.Controls.Add(btnToggleDone);
+
+            RefreshTasks();
+        }
+
+        private void RefreshTasks()
+        {
+            lvTasks.Items.Clear();
+            foreach (var task in repo.Tasks)
+            {
+                var lvi = new ListViewItem(task.Title);
+                lvi.SubItems.Add(task.Priority.ToString());
+                lvi.SubItems.Add(task.Category);
+                lvi.SubItems.Add(task.DueDate?.ToShortDateString() ?? "-");
+                lvi.SubItems.Add(task.IsDone ? "Да" : "Нет");
+                lvi.Tag = task;
+                lvTasks.Items.Add(lvi);
+            }
+        }
+
+        private void BtnAdd_Click(object sender, EventArgs e)
+        {
+            var form = new TaskForm();
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                repo.Add(form.Task);
+                RefreshTasks();
+            }
+        }
+
+        private void BtnEdit_Click(object sender, EventArgs e)
+        {
+            if (lvTasks.SelectedItems.Count == 0) return;
+            var task = (TaskItem)lvTasks.SelectedItems[0].Tag;
+            var form = new TaskForm(task);
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                repo.Update(form.Task);
+                RefreshTasks();
+            }
+        }
+            private void BtnDelete_Click(object sender, EventArgs e)
+        {
+            if (lvTasks.SelectedItems.Count == 0) return;
+            var task = (TaskItem)lvTasks.SelectedItems[0].Tag;
+            repo.Remove(task);
+            RefreshTasks();
+        }
+
+        private void BtnToggleDone_Click(object sender, EventArgs e)
+        {
+            if (lvTasks.SelectedItems.Count == 0) return;
+            var task = (TaskItem)lvTasks.SelectedItems[0].Tag;
+            task.IsDone = !task.IsDone;
+            repo.Update(task);
+            RefreshTasks();
         }
     }
 }
